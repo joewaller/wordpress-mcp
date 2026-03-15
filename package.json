@@ -1,0 +1,17 @@
+{
+  "name": "wordpress-mcp-server",
+  "version": "1.0.0",
+  "description": "WordPress MCP server with backup-before-change and multi-site support",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "better-sqlite3": "^11.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
