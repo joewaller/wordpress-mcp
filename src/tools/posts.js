@@ -9,11 +9,16 @@ import { listSiteSlugs } from '../config.js';
 const siteEnum = listSiteSlugs();
 
 // Fields that WP accepts on create/update (allowlist for restore safety)
+// Core WP fields + known custom fields registered on finder.com.au
 const WRITABLE_POST_FIELDS = [
+  // Core WP
   'title', 'content', 'excerpt', 'status', 'slug',
   'categories', 'tags', 'featured_media', 'comment_status',
   'ping_status', 'meta', 'sticky', 'template', 'format',
   'author', 'date', 'password',
+  // Custom fields (finder.com.au)
+  'custom_fields', 'amp_enabled', 'asset_tag',
+  'categoryNicheCode', 'hrefLangLinks',
 ];
 
 /**
