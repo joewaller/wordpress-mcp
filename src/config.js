@@ -10,18 +10,19 @@
  */
 
 const SITES = {
-  'finder-com-au-qa1': {
-    label: 'finder.com.au QA1',
-    baseUrl: 'https://site-fca.qa01.au-se1.gcp.finder.com',
+  'finder-com-au-prod': {
+    label: 'finder.com.au Production',
+    baseUrl: 'https://www.finder.com.au',
     multisite: false,
-    credentialPrefix: 'WP_FINDER_COM_AU_QA1',
+    credentialPrefix: 'WP_FINDER_COM_AU_PROD',
   },
-  'finder-com-qa1': {
-    label: 'finder.com QA1',
-    baseUrl: 'https://site-fin.qa01.au-se1.gcp.finder.com',
-    multisite: true,
-    credentialPrefix: 'WP_FINDER_COM_QA1',
-  },
+  // QA sites don't support Application Passwords — uncomment when resolved
+  // 'finder-com-au-qa1': {
+  //   label: 'finder.com.au QA1',
+  //   baseUrl: 'https://site-fca.qa01.au-se1.gcp.finder.com',
+  //   multisite: false,
+  //   credentialPrefix: 'WP_FINDER_COM_AU_QA1',
+  // },
 };
 
 /**
