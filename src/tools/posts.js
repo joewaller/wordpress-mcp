@@ -21,25 +21,6 @@ const WRITABLE_POST_FIELDS = [
   'categoryNicheCode', 'hrefLangLinks',
 ];
 
-/**
- * Filter a WP post object down to writable fields only.
- */
-function filterWritableFields(post) {
-  const filtered = {};
-  for (const key of WRITABLE_POST_FIELDS) {
-    if (post[key] !== undefined) {
-      // WP returns title/content/excerpt as { raw, rendered } with context=edit
-      // We want the raw value for faithful restore
-      if (typeof post[key] === 'object' && post[key] !== null && 'raw' in post[key]) {
-        filtered[key] = post[key].raw;
-      } else {
-        filtered[key] = post[key];
-      }
-    }
-  }
-  return filtered;
-}
-
 export const POST_TOOLS = [
   {
     name: 'wp_list_posts',
@@ -140,8 +121,14 @@ export const POST_TOOLS = [
   },
 ];
 
+const VALID_POST_TYPES = ['posts', 'pages'];
+
 function resolvePostType(args) {
-  return args.post_type || 'posts';
+  const type = args.post_type || 'posts';
+  if (!VALID_POST_TYPES.includes(type)) {
+    throw new Error(`Invalid post_type "${type}". Must be one of: ${VALID_POST_TYPES.join(', ')}`);
+  }
+  return type;
 }
 
 export async function handleListPosts(client, args) {
@@ -196,7 +183,7 @@ export async function handleListRevisions(client, args) {
 export async function handleCreatePost(client, args) {
   const type = resolvePostType(args);
   const body = {};
-  for (const field of ['title', 'content', 'excerpt', 'status', 'categories', 'tags', 'featured_media']) {
+  for (const field of WRITABLE_POST_FIELDS) {
     if (args[field] !== undefined) body[field] = args[field];
   }
   if (!body.status) body.status = 'draft';
@@ -279,4 +266,4 @@ export async function handleDeletePost(client, backupStore, args, userEmail, sit
   };
 }
 
-export { filterWritableFields, WRITABLE_POST_FIELDS };
+export { WRITABLE_POST_FIELDS };

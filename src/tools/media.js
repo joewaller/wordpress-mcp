@@ -37,6 +37,7 @@ export const MEDIA_TOOLS = [
         title: { type: 'string', description: 'Media title' },
         alt_text: { type: 'string', description: 'Alt text for images' },
         caption: { type: 'string', description: 'Media caption' },
+        description: { type: 'string', description: 'Media description' },
       },
       required: ['site', 'filename', 'content_base64', 'content_type'],
     },
@@ -85,6 +86,7 @@ export async function handleUploadMedia(client, args) {
   if (args.title) meta.title = args.title;
   if (args.alt_text) meta.alt_text = args.alt_text;
   if (args.caption) meta.caption = args.caption;
+  if (args.description) meta.description = args.description;
 
   const uploaded = await client.uploadMedia(fileBuffer, args.filename, args.content_type, meta);
 

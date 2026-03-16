@@ -21,21 +21,8 @@ export const SITE_TOOLS = [
 ];
 
 export async function handleGetSiteInfo(client, siteSlug, siteConfig) {
-  // /wp/v2/settings requires admin; fall back to index endpoint
-  // The WP REST API root gives us site info without elevated permissions
-  const baseUrl = client.baseUrl + client.pathPrefix;
-  const response = await fetch(`${baseUrl}/wp-json`, {
-    headers: {
-      'Authorization': client.authHeader,
-      'Accept': 'application/json',
-    },
-  });
-
-  if (!response.ok) {
-    throw new Error(`Failed to fetch site info: ${response.status}`);
-  }
-
-  const data = await response.json();
+  // /wp/v2/settings requires admin; the REST API index gives site info without elevated permissions
+  const data = await client.getSiteIndex();
 
   return {
     site: siteSlug,

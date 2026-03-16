@@ -39,10 +39,14 @@ class WordPressMCPServer {
           getDefaultCredentials()
         );
 
-        // Resolve site — required for most tools, optional for wp_list_changes
+        // Resolve site — required for most tools, optional for wp_list_changes and wp_restore
         const site = cleanArgs.site;
         let client = null;
         let siteConfig = null;
+
+        // wp_restore and wp_list_changes can work without a site param
+        // (wp_restore reads it from the backup record)
+        const siteOptionalTools = ['wp_list_changes', 'wp_restore'];
 
         if (site) {
           siteConfig = getSiteConfig(site);
@@ -53,8 +57,23 @@ class WordPressMCPServer {
             siteCreds.appPassword,
             { pathPrefix: siteConfig.pathPrefix || '' }
           );
-        } else if (name !== 'wp_list_changes') {
+        } else if (!siteOptionalTools.includes(name)) {
           throw new Error('site parameter is required');
+        }
+
+        // For wp_restore without explicit site, build client from the backup's stored site
+        if (name === 'wp_restore' && !client) {
+          const backup = this.backupStore.getBackup(cleanArgs.backup_id);
+          if (!backup) throw new Error(`Backup ${cleanArgs.backup_id} not found`);
+          const backupSite = backup.wp_site;
+          siteConfig = getSiteConfig(backupSite);
+          const siteCreds = getSiteCredentials(backupSite, credentials);
+          client = new WordPressClient(
+            siteConfig.baseUrl,
+            siteCreds.user,
+            siteCreds.appPassword,
+            { pathPrefix: siteConfig.pathPrefix || '' }
+          );
         }
 
         return await handleToolCall(name, cleanArgs, client, this.backupStore, userEmail, site, siteConfig);

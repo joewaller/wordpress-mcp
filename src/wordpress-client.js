@@ -93,6 +93,14 @@ export class WordPressClient {
   }
 
   /**
+   * Fetch the WP REST API index (/wp-json) with retry logic.
+   * @returns {Promise<object>} Site index data
+   */
+  async getSiteIndex() {
+    return this.request('GET', '/../..');
+  }
+
+  /**
    * Upload media via multipart form data.
    * @param {Buffer} fileBuffer - File content
    * @param {string} filename - Original filename
@@ -143,7 +151,12 @@ export class WordPressClient {
 
     if (!response.ok) {
       const text = await response.text();
-      throw new Error(`WordPress media upload → ${response.status}: ${text}`);
+      let detail = text;
+      try {
+        const json = JSON.parse(text);
+        detail = json.message || text;
+      } catch { /* use raw text */ }
+      throw new Error(`WordPress media upload → ${response.status}: ${detail}`);
     }
 
     return response.json();
