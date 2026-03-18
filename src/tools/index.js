@@ -9,6 +9,7 @@ import { MEDIA_TOOLS, handleListMedia, handleUploadMedia, handleDeleteMedia } fr
 import { TAXONOMY_TOOLS, handleGetCategories, handleGetTags } from './taxonomy.js';
 import { SITE_TOOLS, handleGetSiteInfo } from './site.js';
 import { CHANGES_TOOLS, handleListChanges, handleRestore } from './changes.js';
+import { COMMENT_TOOLS, handleListComments, handleGetComment, handleCreateComment, handleUpdateComment, handleDeleteComment, handleListUnansweredComments } from './comments.js';
 
 export const TOOLS = [
   ...POST_TOOLS,
@@ -16,6 +17,7 @@ export const TOOLS = [
   ...TAXONOMY_TOOLS,
   ...SITE_TOOLS,
   ...CHANGES_TOOLS,
+  ...COMMENT_TOOLS,
 ];
 
 /**
@@ -84,6 +86,26 @@ export async function handleToolCall(name, args, client, backupStore, userEmail,
       break;
     case 'wp_restore':
       result = await handleRestore(client, backupStore, args, userEmail, site);
+      break;
+
+    // Comments
+    case 'wp_list_comments':
+      result = await handleListComments(client, args);
+      break;
+    case 'wp_get_comment':
+      result = await handleGetComment(client, args);
+      break;
+    case 'wp_create_comment':
+      result = await handleCreateComment(client, backupStore, args, userEmail, site);
+      break;
+    case 'wp_update_comment':
+      result = await handleUpdateComment(client, backupStore, args, userEmail, site);
+      break;
+    case 'wp_delete_comment':
+      result = await handleDeleteComment(client, backupStore, args, userEmail, site);
+      break;
+    case 'wp_list_unanswered_comments':
+      result = await handleListUnansweredComments(client, args);
       break;
 
     default:

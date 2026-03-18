@@ -26,6 +26,12 @@ MCP server that wraps the WordPress REST API with **backup-before-change** and *
 | `wp_get_categories` | List categories |
 | `wp_get_tags` | List tags |
 | `wp_get_site_info` | Site info and connectivity check |
+| `wp_list_comments` | List/search comments with filters |
+| `wp_get_comment` | Get a single comment with full detail |
+| `wp_create_comment` | Create a comment or reply (auto-audit) |
+| `wp_update_comment` | Update a comment (auto-backup) |
+| `wp_delete_comment` | Trash or delete a comment (auto-backup) |
+| `wp_list_unanswered_comments` | Find top-level comments with no replies |
 | `wp_list_changes` | Query the backup/change log |
 | `wp_restore` | Restore from a backup (auto-backup before restore) |
 
