@@ -24,12 +24,12 @@ const WRITABLE_POST_FIELDS = [
 export const POST_TOOLS = [
   {
     name: 'wp_list_posts',
-    description: 'List or search WordPress posts/pages. Returns titles, IDs, status, and dates.',
+    description: 'List or search WordPress posts, pages, or partials. Returns titles, IDs, status, and dates.',
     inputSchema: {
       type: 'object',
       properties: {
         site: { type: 'string', enum: siteEnum, description: 'Target WordPress site' },
-        post_type: { type: 'string', description: 'Post type: "posts" or "pages" (default: "posts")' },
+        post_type: { type: 'string', description: 'Post type: "posts", "pages", or "partials" (read-only). Default: "posts".' },
         status: { type: 'string', description: 'Filter by status: publish, draft, pending, private, trash, any (default: any)' },
         search: { type: 'string', description: 'Search query' },
         categories: { type: 'string', description: 'Comma-separated category IDs' },
@@ -41,26 +41,26 @@ export const POST_TOOLS = [
   },
   {
     name: 'wp_get_post',
-    description: 'Get a single WordPress post or page by ID, including full content, meta, and taxonomy terms. NOTE: The following finder.com.au fields are stored in wp_postmeta but NOT registered with show_in_rest, so they are NOT included in the response: post_co_author, post_reviewer, post_editor, post_is_fact_checked, post_last_major_update_reason (unconfirmed key), select2-acf-fielld_attribution_category, post_status_code_410, table_shortcode, masthead-subheading-meta-box-clone. These require show_in_rest registration on the WordPress side to become accessible via the REST API.',
+    description: 'Get a single WordPress post, page, or partial by ID, including full content, meta, and taxonomy terms. NOTE: The following finder.com.au fields are stored in wp_postmeta but NOT registered with show_in_rest, so they are NOT included in the response: post_co_author, post_reviewer, post_editor, post_is_fact_checked, post_last_major_update_reason (unconfirmed key), select2-acf-fielld_attribution_category, post_status_code_410, table_shortcode, masthead-subheading-meta-box-clone. These require show_in_rest registration on the WordPress side to become accessible via the REST API.',
     inputSchema: {
       type: 'object',
       properties: {
         site: { type: 'string', enum: siteEnum, description: 'Target WordPress site' },
-        id: { type: 'number', description: 'Post/page ID' },
-        post_type: { type: 'string', description: 'Post type: "posts" or "pages" (default: "posts")' },
+        id: { type: 'number', description: 'Post/page/partial ID' },
+        post_type: { type: 'string', description: 'Post type: "posts", "pages", or "partials" (read-only). Default: "posts".' },
       },
       required: ['site', 'id'],
     },
   },
   {
     name: 'wp_list_revisions',
-    description: 'List WordPress native revisions for a post or page.',
+    description: 'List WordPress native revisions for a post, page, or partial.',
     inputSchema: {
       type: 'object',
       properties: {
         site: { type: 'string', enum: siteEnum, description: 'Target WordPress site' },
-        post_id: { type: 'number', description: 'Post/page ID' },
-        post_type: { type: 'string', description: 'Post type: "posts" or "pages" (default: "posts")' },
+        post_id: { type: 'number', description: 'Post/page/partial ID' },
+        post_type: { type: 'string', description: 'Post type: "posts", "pages", or "partials" (read-only). Default: "posts".' },
       },
       required: ['site', 'post_id'],
     },
@@ -121,7 +121,11 @@ export const POST_TOOLS = [
   },
 ];
 
-const VALID_POST_TYPES = ['posts', 'pages'];
+// Read-only types can be listed/fetched but not created/updated/deleted via this MCP.
+// `partials` maps to the `partial` custom post type registered by the partial-builder
+// mu-plugin in finderau/site (exposed via REST as /wp/v2/partials).
+const READ_POST_TYPES = ['posts', 'pages', 'partials'];
+const WRITE_POST_TYPES = ['posts', 'pages'];
 
 // Intentionally duplicated in media.js and changes.js to keep tool files self-contained
 function requirePositiveInt(value, name) {
@@ -132,10 +136,14 @@ function requirePositiveInt(value, name) {
   return n;
 }
 
-function resolvePostType(args) {
+function resolvePostType(args, mode = 'read') {
   const type = args.post_type || 'posts';
-  if (!VALID_POST_TYPES.includes(type)) {
-    throw new Error(`Invalid post_type — must be one of: ${VALID_POST_TYPES.join(', ')}`);
+  const allowed = mode === 'write' ? WRITE_POST_TYPES : READ_POST_TYPES;
+  if (!allowed.includes(type)) {
+    const suffix = mode === 'write' && READ_POST_TYPES.includes(type)
+      ? ` ("${type}" is read-only)`
+      : '';
+    throw new Error(`Invalid post_type — must be one of: ${allowed.join(', ')}${suffix}`);
   }
   return type;
 }
@@ -199,7 +207,7 @@ export async function handleListRevisions(client, args) {
 }
 
 export async function handleCreatePost(client, backupStore, args, userEmail, site) {
-  const type = resolvePostType(args);
+  const type = resolvePostType(args, 'write');
   const body = {};
   for (const field of WRITABLE_POST_FIELDS) {
     if (args[field] !== undefined) body[field] = args[field];
@@ -230,7 +238,7 @@ export async function handleCreatePost(client, backupStore, args, userEmail, sit
 }
 
 export async function handleUpdatePost(client, backupStore, args, userEmail, site) {
-  const type = resolvePostType(args);
+  const type = resolvePostType(args, 'write');
   const id = requirePositiveInt(args.id, 'id');
   const { id: _id, ...updateFields } = args;
   delete updateFields.site;
@@ -269,7 +277,7 @@ export async function handleUpdatePost(client, backupStore, args, userEmail, sit
 }
 
 export async function handleDeletePost(client, backupStore, args, userEmail, site) {
-  const type = resolvePostType(args);
+  const type = resolvePostType(args, 'write');
   const id = requirePositiveInt(args.id, 'id');
 
   // 1. Snapshot current state

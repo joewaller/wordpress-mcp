@@ -14,9 +14,9 @@ MCP server that wraps the WordPress REST API with **backup-before-change** and *
 
 | Tool | Description |
 |------|-------------|
-| `wp_list_posts` | List/search posts or pages |
-| `wp_get_post` | Get a single post/page with full content |
-| `wp_list_revisions` | List WordPress native revisions for a post/page |
+| `wp_list_posts` | List/search posts, pages, or partials (partials are read-only) |
+| `wp_get_post` | Get a single post/page/partial with full content |
+| `wp_list_revisions` | List WordPress native revisions for a post/page/partial |
 | `wp_create_post` | Create a new post/page (defaults to draft) |
 | `wp_update_post` | Update a post/page (auto-backup) |
 | `wp_delete_post` | Trash or delete a post/page (auto-backup) |
