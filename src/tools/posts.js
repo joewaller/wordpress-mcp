@@ -131,11 +131,13 @@ const SUMMARY_FIELDS = [
   'template', 'format', 'comment_status', 'ping_status', 'sticky',
 ];
 
-// Fields to request via _fields when content is excluded (avoids downloading HTML over the wire)
-const METADATA_FIELDS = [
-  ...SUMMARY_FIELDS.filter(f => f !== 'title'), // title needs special handling (object vs string)
-  'title', 'excerpt',
-].join(',');
+// Fields to request via _fields when content is excluded (avoids downloading HTML over the wire).
+// Includes 'excerpt' on top of summary fields so the truncated excerpt can be returned.
+const METADATA_FIELDS = [...SUMMARY_FIELDS, 'excerpt'].join(',');
+
+// Excerpt is truncated when content is excluded — long enough for topic context,
+// short enough to keep the metadata-only response tiny.
+const EXCERPT_TRUNCATE_LENGTH = 500;
 
 /**
  * Build a compact post summary, stripping _links, guid, and other noise.
@@ -166,10 +168,9 @@ function summarisePost(p, includeContent = true) {
     summary.content = p.content?.raw || p.content?.rendered || p.content;
     summary.excerpt = p.excerpt?.raw || p.excerpt?.rendered || p.excerpt;
   } else {
-    // Truncated excerpt gives topic context without full content
     const excerptRaw = p.excerpt?.raw || p.excerpt?.rendered || '';
-    summary.excerpt = excerptRaw.length > 500
-      ? excerptRaw.substring(0, 500) + '...'
+    summary.excerpt = excerptRaw.length > EXCERPT_TRUNCATE_LENGTH
+      ? excerptRaw.substring(0, EXCERPT_TRUNCATE_LENGTH) + '...'
       : excerptRaw;
   }
 
