@@ -107,6 +107,19 @@ export const POST_TOOLS = [
     },
   },
   {
+    name: 'wp_get_post_url',
+    description: 'Get just the permalink URL for a WordPress post or page by ID. Extremely lightweight — returns only the URL string.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        site: { type: 'string', enum: siteEnum, description: 'Target WordPress site' },
+        id: { type: 'number', description: 'Post/page ID' },
+        post_type: { type: 'string', description: 'Post type: "posts" or "pages" (default: "posts")' },
+      },
+      required: ['site', 'id'],
+    },
+  },
+  {
     name: 'wp_delete_post',
     description: 'Delete (trash) a WordPress post or page. Automatically backs up current state before deleting. Use force=true for permanent deletion.',
     inputSchema: {
@@ -241,6 +254,13 @@ export async function handleGetPost(client, args) {
   // Metadata-only: use _fields to avoid downloading HTML over the wire
   const post = await client.get(`/${type}/${id}?context=edit&_fields=${METADATA_FIELDS}`);
   return summarisePost(post, false);
+}
+
+export async function handleGetPostUrl(client, args) {
+  const type = resolvePostType(args);
+  const id = requirePositiveInt(args.id, 'id');
+  const post = await client.get(`/${type}/${id}?_fields=id,link`);
+  return { id: post.id, url: post.link };
 }
 
 export async function handleListRevisions(client, args) {
