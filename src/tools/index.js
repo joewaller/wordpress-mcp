@@ -4,7 +4,7 @@
  * Aggregates all tool definitions and routes tool calls to the correct handler.
  */
 
-import { POST_TOOLS, handleListPosts, handleGetPost, handleListRevisions, handleCreatePost, handleUpdatePost, handleDeletePost } from './posts.js';
+import { POST_TOOLS, handleListPosts, handleGetPost, handleGetPostUrl, handleListRevisions, handleCreatePost, handleUpdatePost, handleDeletePost } from './posts.js';
 import { MEDIA_TOOLS, handleListMedia, handleUploadMedia, handleDeleteMedia } from './media.js';
 import { TAXONOMY_TOOLS, handleGetCategories, handleGetTags } from './taxonomy.js';
 import { SITE_TOOLS, handleGetSiteInfo } from './site.js';
@@ -42,6 +42,9 @@ export async function handleToolCall(name, args, client, backupStore, userEmail,
       break;
     case 'wp_get_post':
       result = await handleGetPost(client, args);
+      break;
+    case 'wp_get_post_url':
+      result = await handleGetPostUrl(client, args);
       break;
     case 'wp_list_revisions':
       result = await handleListRevisions(client, args);

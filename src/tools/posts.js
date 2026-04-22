@@ -41,13 +41,14 @@ export const POST_TOOLS = [
   },
   {
     name: 'wp_get_post',
-    description: 'Get a single WordPress post or page by ID, including full content, meta, and taxonomy terms. NOTE: The following finder.com.au fields are stored in wp_postmeta but NOT registered with show_in_rest, so they are NOT included in the response: post_co_author, post_reviewer, post_editor, post_is_fact_checked, post_last_major_update_reason (unconfirmed key), select2-acf-fielld_attribution_category, post_status_code_410, table_shortcode, masthead-subheading-meta-box-clone. These require show_in_rest registration on the WordPress side to become accessible via the REST API.',
+    description: 'Get a single WordPress post or page by ID. Set include_content=false to get metadata only (title, status, categories, tags, meta fields) — this saves significant tokens when you don\'t need the full HTML content. NOTE: The following finder.com.au fields are stored in wp_postmeta but NOT registered with show_in_rest, so they are NOT included in the response: post_co_author, post_reviewer, post_editor, post_is_fact_checked, post_last_major_update_reason (unconfirmed key), select2-acf-fielld_attribution_category, post_status_code_410, table_shortcode, masthead-subheading-meta-box-clone. These require show_in_rest registration on the WordPress side to become accessible via the REST API.',
     inputSchema: {
       type: 'object',
       properties: {
         site: { type: 'string', enum: siteEnum, description: 'Target WordPress site' },
         id: { type: 'number', description: 'Post/page ID' },
         post_type: { type: 'string', description: 'Post type: "posts" or "pages" (default: "posts")' },
+        include_content: { type: 'boolean', description: 'Include full post content and excerpt in response. Set to false when you only need metadata, categories, tags, and meta fields (saves significant context). Default: true.' },
       },
       required: ['site', 'id'],
     },
@@ -108,6 +109,19 @@ export const POST_TOOLS = [
     },
   },
   {
+    name: 'wp_get_post_url',
+    description: 'Get just the permalink URL for a WordPress post or page by ID. Extremely lightweight — returns only the URL string.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        site: { type: 'string', enum: siteEnum, description: 'Target WordPress site' },
+        id: { type: 'number', description: 'Post/page ID' },
+        post_type: { type: 'string', description: 'Post type: "posts" or "pages" (default: "posts")' },
+      },
+      required: ['site', 'id'],
+    },
+  },
+  {
     name: 'wp_delete_post',
     description: 'Delete (trash) a WordPress post or page. Automatically backs up current state before deleting. Use force=true for permanent deletion.',
     inputSchema: {
@@ -124,6 +138,59 @@ export const POST_TOOLS = [
 ];
 
 const VALID_POST_TYPES = ['posts', 'pages'];
+
+// Fields to return in the compact summary (always included regardless of include_content)
+const SUMMARY_FIELDS = [
+  'id', 'title', 'status', 'date', 'modified', 'slug', 'link',
+  'author', 'featured_media', 'categories', 'tags', 'meta',
+  'template', 'format', 'comment_status', 'ping_status', 'sticky',
+];
+
+// Fields to request via _fields when content is excluded (avoids downloading HTML over the wire).
+// Includes 'excerpt' on top of summary fields so the truncated excerpt can be returned.
+const METADATA_FIELDS = [...SUMMARY_FIELDS, 'excerpt'].join(',');
+
+// Excerpt is truncated when content is excluded — long enough for topic context,
+// short enough to keep the metadata-only response tiny.
+const EXCERPT_TRUNCATE_LENGTH = 500;
+
+/**
+ * Build a compact post summary, stripping _links, guid, and other noise.
+ * Follows the summariseComment() pattern from comments.js.
+ */
+function summarisePost(p, includeContent = true) {
+  const summary = {
+    id: p.id,
+    title: p.title?.raw || p.title?.rendered || p.title,
+    status: p.status,
+    date: p.date,
+    modified: p.modified,
+    slug: p.slug,
+    link: p.link,
+    author: p.author,
+    featured_media: p.featured_media,
+    categories: p.categories,
+    tags: p.tags,
+    meta: p.meta,
+    template: p.template,
+    format: p.format,
+    comment_status: p.comment_status,
+    ping_status: p.ping_status,
+    sticky: p.sticky,
+  };
+
+  if (includeContent) {
+    summary.content = p.content?.raw || p.content?.rendered || p.content;
+    summary.excerpt = p.excerpt?.raw || p.excerpt?.rendered || p.excerpt;
+  } else {
+    const excerptRaw = p.excerpt?.raw || p.excerpt?.rendered || '';
+    summary.excerpt = excerptRaw.length > EXCERPT_TRUNCATE_LENGTH
+      ? excerptRaw.substring(0, EXCERPT_TRUNCATE_LENGTH) + '...'
+      : excerptRaw;
+  }
+
+  return summary;
+}
 
 // Intentionally duplicated in media.js and changes.js to keep tool files self-contained
 function requirePositiveInt(value, name) {
@@ -180,7 +247,22 @@ export async function handleListPosts(client, args) {
 export async function handleGetPost(client, args) {
   const type = resolvePostType(args);
   const id = requirePositiveInt(args.id, 'id');
-  return client.get(`/${type}/${id}?context=edit`);
+  const includeContent = args.include_content !== false;
+
+  if (includeContent) {
+    const post = await client.get(`/${type}/${id}?context=edit`);
+    return summarisePost(post, true);
+  }
+  // Metadata-only: use _fields to avoid downloading HTML over the wire
+  const post = await client.get(`/${type}/${id}?context=edit&_fields=${METADATA_FIELDS}`);
+  return summarisePost(post, false);
+}
+
+export async function handleGetPostUrl(client, args) {
+  const type = resolvePostType(args);
+  const id = requirePositiveInt(args.id, 'id');
+  const post = await client.get(`/${type}/${id}?_fields=id,link`);
+  return { id: post.id, url: post.link };
 }
 
 export async function handleListRevisions(client, args) {
